@@ -1,26 +1,37 @@
 # Ścieżki do plików
-$inputFile = "C:\ścieżka_do_pliku\requests.csv"
-$outputFile = "C:\ścieżka_do_pliku\tr_seq_requests.txt"
+$requestsFile = "C:\ścieżka_do_pliku\requests.csv"
+$responsesFile = "C:\ścieżka_do_pliku\responses.csv"
+$outputFile = "C:\ścieżka_do_pliku\missing_responses.txt"
 
-# Wczytaj dane jako zwykły tekst, bez zakładania struktury CSV
-$data = Get-Content -Path $inputFile
+# Wczytaj dane z plików jako zwykły tekst
+$requestsData = Get-Content -Path $requestsFile
+$responsesData = Get-Content -Path $responsesFile
 
 # Funkcja do wydobywania wartości z tagów <tr_seq>
 function Extract-TrSeq {
     param ([string]$Text)
-    # Wyrażenie regularne, które dopasowuje wszystkie <tr_seq>...</tr_seq>
     $pattern = "<tr_seq>(.*?)</tr_seq>"
     [regex]::Matches($Text, $pattern) | ForEach-Object { $_.Groups[1].Value }
 }
 
-# Wyodrębnij wszystkie wystąpienia <tr_seq> w pliku
-$allTrSeq = @()
-foreach ($line in $data) {
-    $allTrSeq += Extract-TrSeq $line
+# Wyodrębnij tr_seq z requests
+$requestsTrSeq = @()
+foreach ($line in $requestsData) {
+    $requestsTrSeq += Extract-TrSeq $line
 }
+$requestsTrSeq = $requestsTrSeq | Sort-Object -Unique
 
-# Usuń duplikaty i zapisz wyniki do pliku
-$allTrSeq = $allTrSeq | Sort-Object -Unique
-$allTrSeq | Set-Content -Path $outputFile
+# Wyodrębnij tr_seq z responses
+$responsesTrSeq = @()
+foreach ($line in $responsesData) {
+    $responsesTrSeq += Extract-TrSeq $line
+}
+$responsesTrSeq = $responsesTrSeq | Sort-Object -Unique
 
-Write-Host "Znaleziono $($allTrSeq.Count) wartości tr_seq. Wyniki zapisano do $outputFile."
+# Znajdź brakujące tr_seq
+$missingTrSeq = $requestsTrSeq | Where-Object { $_ -notin $responsesTrSeq }
+
+# Zapisz brakujące tr_seq do pliku
+$missingTrSeq | Set-Content -Path $outputFile
+
+Write-Host "Znaleziono $($missingTrSeq.Count) brakujących wartości tr_seq. Wyniki zapisano do $outputFile."
