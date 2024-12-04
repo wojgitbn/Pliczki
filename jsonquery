@@ -1,0 +1,20 @@
+{
+  "query": {
+    "bool": {
+      "must": [
+        { "term": { "type": "request" } }
+      ],
+      "must_not": [
+        {
+          "terms": {
+            "correlation_id": {
+              "index": "log-index",
+              "id": "response-correlations",
+              "path": "correlation_id"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
