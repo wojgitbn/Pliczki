@@ -1,0 +1,59 @@
+# Wczytaj dane z plików CSV (jedna kolumna)
+$requests = Import-Csv -Path "C:\ścieżka_do_pliku\requests.csv" -Header "data"
+$responses = Import-Csv -Path "C:\ścieżka_do_pliku\responses.csv" -Header "data"
+
+# Funkcja do wydobywania wartości z tagu <tr_seq>
+function Extract-TrSeq {
+    param ([string]$Text)
+    $pattern = "<tr_seq>(.*?)</tr_seq>"
+    if ($Text -match $pattern) {
+        return $Matches[1]
+    }
+    return $null
+}
+
+# Dodajemy nową właściwość 'tr_seq_clean' do każdego obiektu w requests i responses
+$requests = $requests | ForEach-Object {
+    # Dodajemy właściwość 'tr_seq_clean' z wartością wyodrębnioną z 'data'
+    $_ | Add-Member -MemberType NoteProperty -Name "tr_seq_clean" -Value (Extract-TrSeq $_.data)
+    $_
+}
+
+$responses = $responses | ForEach-Object {
+    # Dodajemy właściwość 'tr_seq_clean' z wartością wyodrębnioną z 'data'
+    $_ | Add-Member -MemberType NoteProperty -Name "tr_seq_clean" -Value (Extract-TrSeq $_.data)
+    $_
+}
+
+# Wyodrębnij listę tr_seq z response
+$responseIds = $responses.tr_seq_clean | Where-Object { $_ -ne $null }
+
+# Znajdź requesty bez odpowiedzi
+$missingResponses = $requests | Where-Object { -not ($responseIds -contains $_.tr_seq_clean) }
+
+# Znajdź response, które nie mają odpowiadającego requestu
+$missingRequests = $responses | Where-Object { -not ($requests.tr_seq_clean -contains $_.tr_seq_clean) }
+
+# Dodaj właściwość 'tr_seq_clean' do brakujących odpowiedzi
+$missingResponses = $missingResponses | ForEach-Object {
+    $_ | Add-Member -MemberType NoteProperty -Name "tr_seq_clean" -Value (Extract-TrSeq $_.data)
+    $_
+}
+
+# Dodaj właściwość 'tr_seq_clean' do brakujących requestów
+$missingRequests = $missingRequests | ForEach-Object {
+    $_ | Add-Member -MemberType NoteProperty -Name "tr_seq_clean" -Value (Extract-TrSeq $_.data)
+    $_
+}
+
+# Połącz brakujące odpowiedzi i brakujące requesty
+$allMissing = $missingResponses + $missingRequests
+
+# Zapisz brakujące response i brakujące requesty do pliku tekstowego
+$allMissing | ForEach-Object {
+    "$($_.data) - tr_seq_clean: $($_.tr_seq_clean)"
+} | Set-Content -Path "C:\ścieżka_do_pliku\missing_responses.txt"
+
+Write-Host "Znaleziono $($missingResponses.Count) requestów bez odpowiedzi."
+Write-Host "Znaleziono $($missingRequests.Count) response bez requestu."
+Write-Host "Wyniki zapisano w missing_responses.txt."
