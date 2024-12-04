@@ -4,12 +4,11 @@ $requests = Import-Csv -Path "C:\ścieżka_do_pliku\requests.csv" -Header "data"
 # Funkcja do wydobywania wartości z tagu <tr_seq>
 function Extract-TrSeq {
     param ([string]$Text)
+    # Usuń podwójne cudzysłowy i wydobądź wartość z <tr_seq>
+    $Text = $Text -replace '"', '' # Usuń podwójne cudzysłowy
     $pattern = "<tr_seq>(.*?)</tr_seq>"
     if ($Text -match $pattern) {
-        Write-Host "Znaleziono tr_seq: $($Matches[1])" -ForegroundColor Green
         return $Matches[1]
-    } else {
-        Write-Host "Brak tr_seq w: $Text" -ForegroundColor Yellow
     }
     return $null
 }
@@ -19,11 +18,7 @@ $trSeqValues = $requests | ForEach-Object {
     Extract-TrSeq $_.data
 } | Where-Object { $_ -ne $null } # Filtrujemy, aby usunąć puste wartości
 
-# Jeśli nic nie znaleziono, wyświetl ostrzeżenie
-if (-not $trSeqValues) {
-    Write-Host "Nie znaleziono żadnych wartości tr_seq. Sprawdź format danych." -ForegroundColor Red
-} else {
-    # Zapisz wartości tr_seq do pliku tekstowego
-    $trSeqValues | Set-Content -Path "C:\ścieżka_do_pliku\tr_seq_requests.txt"
-    Write-Host "Zapisano $($trSeqValues.Count) wartości tr_seq do pliku tr_seq_requests.txt."
-}
+# Zapisz wartości tr_seq do pliku tekstowego
+$trSeqValues | Set-Content -Path "C:\ścieżka_do_pliku\tr_seq_requests.txt"
+
+Write-Host "Zapisano $($trSeqValues.Count) wartości tr_seq do pliku tr_seq_requests.txt."
