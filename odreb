@@ -1,24 +1,26 @@
-# Wczytaj dane z pliku CSV
-$requests = Import-Csv -Path "C:\ścieżka_do_pliku\requests.csv" -Header "data"
+# Ścieżki do plików
+$inputFile = "C:\ścieżka_do_pliku\requests.csv"
+$outputFile = "C:\ścieżka_do_pliku\tr_seq_requests.txt"
 
-# Funkcja do wydobywania wartości z tagu <tr_seq>
+# Wczytaj dane jako zwykły tekst, bez zakładania struktury CSV
+$data = Get-Content -Path $inputFile
+
+# Funkcja do wydobywania wartości z tagów <tr_seq>
 function Extract-TrSeq {
     param ([string]$Text)
-    # Usuń podwójne cudzysłowy i wydobądź wartość z <tr_seq>
-    $Text = $Text -replace '"', '' # Usuń podwójne cudzysłowy
+    # Wyrażenie regularne, które dopasowuje wszystkie <tr_seq>...</tr_seq>
     $pattern = "<tr_seq>(.*?)</tr_seq>"
-    if ($Text -match $pattern) {
-        return $Matches[1]
-    }
-    return $null
+    [regex]::Matches($Text, $pattern) | ForEach-Object { $_.Groups[1].Value }
 }
 
-# Wyodrębnij wszystkie wartości tr_seq
-$trSeqValues = $requests | ForEach-Object {
-    Extract-TrSeq $_.data
-} | Where-Object { $_ -ne $null } # Filtrujemy, aby usunąć puste wartości
+# Wyodrębnij wszystkie wystąpienia <tr_seq> w pliku
+$allTrSeq = @()
+foreach ($line in $data) {
+    $allTrSeq += Extract-TrSeq $line
+}
 
-# Zapisz wartości tr_seq do pliku tekstowego
-$trSeqValues | Set-Content -Path "C:\ścieżka_do_pliku\tr_seq_requests.txt"
+# Usuń duplikaty i zapisz wyniki do pliku
+$allTrSeq = $allTrSeq | Sort-Object -Unique
+$allTrSeq | Set-Content -Path $outputFile
 
-Write-Host "Zapisano $($trSeqValues.Count) wartości tr_seq do pliku tr_seq_requests.txt."
+Write-Host "Znaleziono $($allTrSeq.Count) wartości tr_seq. Wyniki zapisano do $outputFile."
