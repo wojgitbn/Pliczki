@@ -14,17 +14,18 @@ HEADERS_TEMPLATE = lambda instance_no: {
 def parse_response(xml_text):
     try:
         root = ET.fromstring(xml_text)
-        # Szukamy elementu kończącego się na 'pObj_inout'
         for elem in root.iter():
-            if elem.tag.endswith('pObj_inout'):
-                get_text = lambda name: next(
-                    (child.text for child in elem if child.tag.endswith(name)), 'ERR'
-                )
-                return (
-                    get_text('serviceVersion'),
-                    get_text('facadeVersion'),
-                    get_text('coreBanner')
-                )
+            if elem.tag.endswith('result'):
+                for child in elem:
+                    if child.tag.endswith('pObj_inout'):
+                        get_text = lambda name: next(
+                            (v.text for v in child if v.tag.endswith(name)), 'ERR'
+                        )
+                        return (
+                            get_text('serviceVersion'),
+                            get_text('facadeVersion'),
+                            get_text('coreBanner')
+                        )
         return "ERR", "ERR", "ERR"
     except Exception:
         return "ERR", "ERR", "ERR"
@@ -33,11 +34,11 @@ def parse_response(xml_text):
 with open("lista.txt", "r") as f:
     instances = [line.strip() for line in f if line.strip()]
 
-# Wczytaj szablon SOAP z pliku
+# Wczytaj SOAP XML z pliku
 with open("soap_request3.xml", "r", encoding="utf-8") as f:
     soap_template = f.read()
 
-# Przygotuj plik CSV do zapisu wyników
+# Zapisz dane do CSV
 with open("output.csv", "w", newline="", encoding="utf-8") as csvfile:
     writer = csv.writer(csvfile)
     writer.writerow(["instanceNo", "serviceVersion", "facadeVersion", "coreBanner"])
