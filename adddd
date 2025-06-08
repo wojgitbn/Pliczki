@@ -14,19 +14,17 @@ HEADERS_TEMPLATE = lambda instance_no: {
 def parse_response(xml_text):
     try:
         root = ET.fromstring(xml_text)
+        version = facade = banner = "ERR"
+
         for elem in root.iter():
-            if elem.tag.endswith('result'):
-                for child in elem:
-                    if child.tag.endswith('pObj_inout'):
-                        get_text = lambda name: next(
-                            (v.text for v in child if v.tag.endswith(name)), 'ERR'
-                        )
-                        return (
-                            get_text('serviceVersion'),
-                            get_text('facadeVersion'),
-                            get_text('coreBanner')
-                        )
-        return "ERR", "ERR", "ERR"
+            if elem.tag.endswith("serviceVersion"):
+                version = elem.text or "ERR"
+            elif elem.tag.endswith("facadeVersion"):
+                facade = elem.text or "ERR"
+            elif elem.tag.endswith("coreBanner"):
+                banner = elem.text or "ERR"
+
+        return version, facade, banner
     except Exception:
         return "ERR", "ERR", "ERR"
 
@@ -38,7 +36,7 @@ with open("lista.txt", "r") as f:
 with open("soap_request3.xml", "r", encoding="utf-8") as f:
     soap_template = f.read()
 
-# Zapisz dane do CSV
+# Przygotuj plik CSV do zapisu wyników
 with open("output.csv", "w", newline="", encoding="utf-8") as csvfile:
     writer = csv.writer(csvfile)
     writer.writerow(["instanceNo", "serviceVersion", "facadeVersion", "coreBanner"])
