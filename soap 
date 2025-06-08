@@ -1,0 +1,17 @@
+import requests
+
+url = "http://10.3.6.31:9082/WS14_414_040G/services/wapiOtherSoapHttpPort"
+headers = {
+    "Content-Type": "text/xml; charset=UTF-8",
+    "SOAPAction": "http://wapiOther/WapiOther.wsdl/getserviceinfoother",
+    "instanceNo": "95370000"
+}
+
+with open("soap_request.xml", "r", encoding="utf-8") as f:
+    xml = f.read()
+
+response = requests.post(url, data=xml, headers=headers, verify=False)
+
+print("Status:", response.status_code)
+print("Response:")
+print(response.text[:1000])
