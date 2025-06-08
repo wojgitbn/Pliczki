@@ -1,7 +1,9 @@
 import requests
 import xml.etree.ElementTree as ET
 import csv
+import logging
 
+# === KONFIGURACJA ===
 URL = "http://10.3.6.31:9082/WS14_414_0406/services/wapiOtherSoap"
 HEADERS = {
     "Content-Type": "text/xml; charset=utf-8",
@@ -33,6 +35,9 @@ SOAP_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
    </soapenv:Body>
 </soapenv:Envelope>"""
 
+# === LOGI BŁĘDÓW ===
+logging.basicConfig(filename='error.log', level=logging.ERROR)
+
 def parse_response(xml_text):
     try:
         ns = {
@@ -41,13 +46,20 @@ def parse_response(xml_text):
         }
         root = ET.fromstring(xml_text)
         body = root.find('.//soapenv:Body', ns)
-        values = {
-            'serviceVersion': body.find('.//typ:serviceVersion', ns).text,
-            'facadeVersion': body.find('.//typ:facadeVersion', ns).text,
-            'coreBanner': body.find('.//typ:coreBanner', ns).text
+        if body is None:
+            raise ValueError("SOAP Body not found")
+
+        data = body.find('.//typ:pObj_inout', ns)
+        if data is None:
+            raise ValueError("pObj_inout not found")
+
+        return {
+            'serviceVersion': data.find('typ:serviceVersion', ns).text,
+            'facadeVersion': data.find('typ:facadeVersion', ns).text,
+            'coreBanner': data.find('typ:coreBanner', ns).text
         }
-        return values
     except Exception as e:
+        logging.error(f"Parse error: {e}")
         return {'serviceVersion': 'ERR', 'facadeVersion': 'ERR', 'coreBanner': 'ERR'}
 
 def main():
@@ -62,7 +74,11 @@ def main():
 
             soap_body = SOAP_TEMPLATE.format(instance_no=instance_no)
             try:
-                response = requests.post(URL, data=soap_body, headers=HEADERS, timeout=10)
+                response = requests.post(URL, data=soap_body, headers=HEADERS, timeout=15)
+
+                print(f"\n>>> instanceNo: {instance_no}")
+                print(response.text[:300])  # Pokaż początek odpowiedzi
+
                 parsed = parse_response(response.text)
                 writer.writerow([
                     instance_no,
@@ -70,10 +86,11 @@ def main():
                     parsed['facadeVersion'],
                     parsed['coreBanner']
                 ])
-                print(f"✓ {instance_no} → OK")
+                print(f"✓ OK → {parsed}")
             except Exception as ex:
                 writer.writerow([instance_no, 'ERR', 'ERR', 'ERR'])
-                print(f"✗ {instance_no} → ERROR: {ex}")
+                logging.error(f"{instance_no} - Request error: {ex}")
+                print(f"✗ ERROR → {ex}")
 
 if __name__ == '__main__':
     main()
