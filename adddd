@@ -47,10 +47,10 @@ with open("output.csv", "w", newline="", encoding="utf-8") as csvfile:
 
         try:
             response = requests.post(URL, data=body, headers=headers, verify=False)
-            filename = f"response_{instance_no}.xml"
 
-            with open(filename, "w", encoding="utf-8") as out:
-                out.write(response.text)
+            # Jeśli chcesz zapisywać odpowiedź XML, odkomentuj poniższą linijkę:
+            # with open(f"response_{instance_no}.xml", "w", encoding="utf-8") as out:
+            #     out.write(response.text)
 
             version, facade, banner = parse_response(response.text)
             writer.writerow([instance_no, version, facade, banner])
