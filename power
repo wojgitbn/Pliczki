@@ -1,59 +1,79 @@
-# Wczytaj dane z plików CSV (jedna kolumna)
-$requests = Import-Csv -Path "C:\ścieżka_do_pliku\requests.csv" -Header "data"
-$responses = Import-Csv -Path "C:\ścieżka_do_pliku\responses.csv" -Header "data"
+import requests
+import xml.etree.ElementTree as ET
+import csv
 
-# Funkcja do wydobywania wartości z tagu <tr_seq>
-function Extract-TrSeq {
-    param ([string]$Text)
-    $pattern = "<tr_seq>(.*?)</tr_seq>"
-    if ($Text -match $pattern) {
-        return $Matches[1]
-    }
-    return $null
+URL = "http://10.3.6.31:9082/WS14_414_0406/services/wapiOtherSoap"
+HEADERS = {
+    "Content-Type": "text/xml; charset=utf-8",
+    "SOAPAction": ""
 }
 
-# Dodajemy nową właściwość 'tr_seq_clean' do każdego obiektu w requests i responses
-$requests = $requests | ForEach-Object {
-    # Dodajemy właściwość 'tr_seq_clean' z wartością wyodrębnioną z 'data'
-    $_ | Add-Member -MemberType NoteProperty -Name "tr_seq_clean" -Value (Extract-TrSeq $_.data)
-    $_
-}
+SOAP_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+                  xmlns:typ="http://types.ws14_0406.wapi.eso.enea.pl">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <typ:getserviceinfootherElement>
+         <typ:pObj_inout>
+            <typ:medReqlp1>1</typ:medReqlp1>
+            <typ:medResplp1>1</typ:medResplp1>
+            <typ:wsrIn>1</typ:wsrIn>
+            <typ:srvOut>1</typ:srvOut>
+            <typ:instanceNo>{instance_no}</typ:instanceNo>
+            <typ:wsrOut>1</typ:wsrOut>
+            <typ:srvIn>1</typ:srvIn>
+            <typ:medReqOut>1</typ:medReqOut>
+            <typ:medRespOut>1</typ:medRespOut>
+            <typ:onlyMediation>1</typ:onlyMediation>
+            <typ:serviceVersion>1</typ:serviceVersion>
+            <typ:facadeVersion>1</typ:facadeVersion>
+            <typ:coreBanner>1</typ:coreBanner>
+         </typ:pObj_inout>
+      </typ:getserviceinfootherElement>
+   </soapenv:Body>
+</soapenv:Envelope>"""
 
-$responses = $responses | ForEach-Object {
-    # Dodajemy właściwość 'tr_seq_clean' z wartością wyodrębnioną z 'data'
-    $_ | Add-Member -MemberType NoteProperty -Name "tr_seq_clean" -Value (Extract-TrSeq $_.data)
-    $_
-}
+def parse_response(xml_text):
+    try:
+        ns = {
+            'soapenv': 'http://schemas.xmlsoap.org/soap/envelope/',
+            'typ': 'http://types.ws14_0406.wapi.eso.enea.pl'
+        }
+        root = ET.fromstring(xml_text)
+        body = root.find('.//soapenv:Body', ns)
+        values = {
+            'serviceVersion': body.find('.//typ:serviceVersion', ns).text,
+            'facadeVersion': body.find('.//typ:facadeVersion', ns).text,
+            'coreBanner': body.find('.//typ:coreBanner', ns).text
+        }
+        return values
+    except Exception as e:
+        return {'serviceVersion': 'ERR', 'facadeVersion': 'ERR', 'coreBanner': 'ERR'}
 
-# Wyodrębnij listę tr_seq z response
-$responseIds = $responses.tr_seq_clean | Where-Object { $_ -ne $null }
+def main():
+    with open('instance_list.txt', 'r') as infile, open('output.csv', 'w', newline='') as outfile:
+        writer = csv.writer(outfile)
+        writer.writerow(['instanceNo', 'serviceVersion', 'facadeVersion', 'coreBanner'])
 
-# Znajdź requesty bez odpowiedzi
-$missingResponses = $requests | Where-Object { -not ($responseIds -contains $_.tr_seq_clean) }
+        for line in infile:
+            instance_no = line.strip()
+            if not instance_no:
+                continue
 
-# Znajdź response, które nie mają odpowiadającego requestu
-$missingRequests = $responses | Where-Object { -not ($requests.tr_seq_clean -contains $_.tr_seq_clean) }
+            soap_body = SOAP_TEMPLATE.format(instance_no=instance_no)
+            try:
+                response = requests.post(URL, data=soap_body, headers=HEADERS, timeout=10)
+                parsed = parse_response(response.text)
+                writer.writerow([
+                    instance_no,
+                    parsed['serviceVersion'],
+                    parsed['facadeVersion'],
+                    parsed['coreBanner']
+                ])
+                print(f"✓ {instance_no} → OK")
+            except Exception as ex:
+                writer.writerow([instance_no, 'ERR', 'ERR', 'ERR'])
+                print(f"✗ {instance_no} → ERROR: {ex}")
 
-# Dodaj właściwość 'tr_seq_clean' do brakujących odpowiedzi
-$missingResponses = $missingResponses | ForEach-Object {
-    $_ | Add-Member -MemberType NoteProperty -Name "tr_seq_clean" -Value (Extract-TrSeq $_.data)
-    $_
-}
-
-# Dodaj właściwość 'tr_seq_clean' do brakujących requestów
-$missingRequests = $missingRequests | ForEach-Object {
-    $_ | Add-Member -MemberType NoteProperty -Name "tr_seq_clean" -Value (Extract-TrSeq $_.data)
-    $_
-}
-
-# Połącz brakujące odpowiedzi i brakujące requesty
-$allMissing = $missingResponses + $missingRequests
-
-# Zapisz brakujące response i brakujące requesty do pliku tekstowego
-$allMissing | ForEach-Object {
-    "$($_.data) - tr_seq_clean: $($_.tr_seq_clean)"
-} | Set-Content -Path "C:\ścieżka_do_pliku\missing_responses.txt"
-
-Write-Host "Znaleziono $($missingResponses.Count) requestów bez odpowiedzi."
-Write-Host "Znaleziono $($missingRequests.Count) response bez requestu."
-Write-Host "Wyniki zapisano w missing_responses.txt."
+if __name__ == '__main__':
+    main()
