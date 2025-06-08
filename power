@@ -1,27 +1,24 @@
 import requests
-import xml.etree.ElementTree as ET
-import csv
-import logging
 
-# === KONFIGURACJA ===
-URL = "http://10.3.6.31:9082/WS14_414_0406/services/wapiOtherSoapHttpPort"  # POPRAWNY adres z WSDL
+URL = "http://ascb1:9080/GBWPROD_DEPOZ/ws14_412_000G/ws14_412_000G/services/wapiOtherSoapHttpPort"
+
 HEADERS = {
     "Content-Type": "text/xml; charset=utf-8",
-    "SOAPAction": ""
+    "SOAPAction": "ServiceInfo_getserviceinfoother"
 }
 
-SOAP_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
+soap_body = """<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-                  xmlns:typ="http://types.ws14_0406.wapi.eso.enea.pl">
+                  xmlns:typ="http://wapiOther/WapiOther.wsdl">
    <soapenv:Header/>
    <soapenv:Body>
-      <typ:getserviceinfootherElement>
-         <typ:pObj_inout>
+      <typ:ServiceInfo_getserviceinfoother>
+         <typ:pObj1_inout>
             <typ:medReqlp1>1</typ:medReqlp1>
             <typ:medResplp1>1</typ:medResplp1>
             <typ:wsrIn>1</typ:wsrIn>
             <typ:srvOut>1</typ:srvOut>
-            <typ:instanceNo>{instance_no}</typ:instanceNo>
+            <typ:instanceNo>89610002</typ:instanceNo>   <!-- <-- <- TUTAJ numer -->
             <typ:wsrOut>1</typ:wsrOut>
             <typ:srvIn>1</typ:srvIn>
             <typ:medReqOut>1</typ:medReqOut>
@@ -30,75 +27,12 @@ SOAP_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
             <typ:serviceVersion>1</typ:serviceVersion>
             <typ:facadeVersion>1</typ:facadeVersion>
             <typ:coreBanner>1</typ:coreBanner>
-         </typ:pObj_inout>
-      </typ:getserviceinfootherElement>
+         </typ:pObj1_inout>
+      </typ:ServiceInfo_getserviceinfoother>
    </soapenv:Body>
 </soapenv:Envelope>"""
 
-# === LOGOWANIE BŁĘDÓW ===
-logging.basicConfig(filename='error.log', level=logging.ERROR)
+response = requests.post(URL, data=soap_body, headers=HEADERS)
 
-def parse_response(xml_text):
-    try:
-        ns = {
-            'soapenv': 'http://schemas.xmlsoap.org/soap/envelope/',
-            'typ': 'http://types.ws14_0406.wapi.eso.enea.pl'
-        }
-        root = ET.fromstring(xml_text)
-        body = root.find('.//soapenv:Body', ns)
-        if body is None:
-            raise ValueError("SOAP Body not found")
-
-        data = body.find('.//typ:pObj_inout', ns)
-        if data is None:
-            raise ValueError("pObj_inout not found")
-
-        return {
-            'serviceVersion': data.find('typ:serviceVersion', ns).text,
-            'facadeVersion': data.find('typ:facadeVersion', ns).text,
-            'coreBanner': data.find('typ:coreBanner', ns).text
-        }
-    except Exception as e:
-        logging.error(f"Parse error: {e}")
-        return {'serviceVersion': 'ERR', 'facadeVersion': 'ERR', 'coreBanner': 'ERR'}
-
-def main():
-    with open('instance_list.txt', 'r') as infile, open('output.csv', 'w', newline='') as outfile:
-        writer = csv.writer(outfile)
-        writer.writerow(['instanceNo', 'serviceVersion', 'facadeVersion', 'coreBanner'])
-
-        for line in infile:
-            instance_no = line.strip()
-            if not instance_no:
-                continue
-
-            soap_body = SOAP_TEMPLATE.format(instance_no=instance_no)
-            try:
-                response = requests.post(URL, data=soap_body, headers=HEADERS, timeout=15)
-
-                print(f"\n>>> instanceNo: {instance_no}")
-                print(f"HTTP status: {response.status_code}")
-                print("RESPONSE (początek):")
-                print(response.text[:800])  # Pokaż początek odpowiedzi
-
-                if response.status_code != 200:
-                    logging.error(f"{instance_no} - HTTP error {response.status_code}")
-                    writer.writerow([instance_no, 'ERR', 'ERR', 'ERR'])
-                    continue
-
-                parsed = parse_response(response.text)
-                writer.writerow([
-                    instance_no,
-                    parsed['serviceVersion'],
-                    parsed['facadeVersion'],
-                    parsed['coreBanner']
-                ])
-                print(f"✓ OK → {parsed}")
-
-            except Exception as ex:
-                writer.writerow([instance_no, 'ERR', 'ERR', 'ERR'])
-                logging.error(f"{instance_no} - Request error: {ex}")
-                print(f"✗ ERROR: {ex}")
-
-if __name__ == '__main__':
-    main()
+print("Status:", response.status_code)
+print("Response:\n", response.text)
