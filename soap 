@@ -4,7 +4,7 @@
    <soapenv:Header/>
    <soapenv:Body>
       <typ:getserviceinfootherElement>
-         <typ:pObj1_inout>
+         <typ:pObj_inout>
             <typ:medReqlp1>1</typ:medReqlp1>
             <typ:medResplp1>1</typ:medResplp1>
             <typ:wsrIn>1</typ:wsrIn>
@@ -18,7 +18,7 @@
             <typ:serviceVersion>1</typ:serviceVersion>
             <typ:facadeVersion>1</typ:facadeVersion>
             <typ:coreBanner>1</typ:coreBanner>
-         </typ:pObj1_inout>
+         </typ:pObj_inout>
       </typ:getserviceinfootherElement>
    </soapenv:Body>
 </soapenv:Envelope>
