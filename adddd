@@ -11,35 +11,33 @@ HEADERS_TEMPLATE = lambda instance_no: {
     "instanceNo": instance_no
 }
 
-# Namespace do parsowania XML
-NS = {
-    "soapenv": "http://schemas.xmlsoap.org/soap/envelope/",
-    "typ": "http://wapiOther/WapiOther.wsdl/types/"
-}
-
 def parse_response(xml_text):
     try:
         root = ET.fromstring(xml_text)
-        data = root.find('.//typ:pObj_inout', NS)
-        if data is None:
-            return "ERR", "ERR", "ERR"
-        return (
-            data.findtext('typ:serviceVersion', default='ERR'),
-            data.findtext('typ:facadeVersion', default='ERR'),
-            data.findtext('typ:coreBanner', default='ERR')
-        )
+        # Szukamy elementu kończącego się na 'pObj_inout'
+        for elem in root.iter():
+            if elem.tag.endswith('pObj_inout'):
+                get_text = lambda name: next(
+                    (child.text for child in elem if child.tag.endswith(name)), 'ERR'
+                )
+                return (
+                    get_text('serviceVersion'),
+                    get_text('facadeVersion'),
+                    get_text('coreBanner')
+                )
+        return "ERR", "ERR", "ERR"
     except Exception:
         return "ERR", "ERR", "ERR"
 
-# Wczytaj instancje
+# Wczytaj listę instanceNo
 with open("lista.txt", "r") as f:
     instances = [line.strip() for line in f if line.strip()]
 
-# Wczytaj XML szablon
+# Wczytaj szablon SOAP z pliku
 with open("soap_request3.xml", "r", encoding="utf-8") as f:
     soap_template = f.read()
 
-# Przygotuj plik CSV
+# Przygotuj plik CSV do zapisu wyników
 with open("output.csv", "w", newline="", encoding="utf-8") as csvfile:
     writer = csv.writer(csvfile)
     writer.writerow(["instanceNo", "serviceVersion", "facadeVersion", "coreBanner"])
