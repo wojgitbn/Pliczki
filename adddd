@@ -1,4 +1,6 @@
 import requests
+import xml.etree.ElementTree as ET
+import csv
 
 URL = "http://10.3.6.31:9082/WS14_414_040G/services/wapiOtherSoapHttpPort"
 SOAP_ACTION = "http://wapiOther/WapiOther.wsdl/getserviceinfoother"
@@ -9,27 +11,55 @@ HEADERS_TEMPLATE = lambda instance_no: {
     "instanceNo": instance_no
 }
 
-# Wczytaj listę instanceNo z pliku
+# Namespace do parsowania XML
+NS = {
+    "soapenv": "http://schemas.xmlsoap.org/soap/envelope/",
+    "typ": "http://wapiOther/WapiOther.wsdl/types/"
+}
+
+def parse_response(xml_text):
+    try:
+        root = ET.fromstring(xml_text)
+        data = root.find('.//typ:pObj_inout', NS)
+        if data is None:
+            return "ERR", "ERR", "ERR"
+        return (
+            data.findtext('typ:serviceVersion', default='ERR'),
+            data.findtext('typ:facadeVersion', default='ERR'),
+            data.findtext('typ:coreBanner', default='ERR')
+        )
+    except Exception:
+        return "ERR", "ERR", "ERR"
+
+# Wczytaj instancje
 with open("lista.txt", "r") as f:
     instances = [line.strip() for line in f if line.strip()]
 
-# Wczytaj szablon XML z pliku
+# Wczytaj XML szablon
 with open("soap_request3.xml", "r", encoding="utf-8") as f:
     soap_template = f.read()
 
-# Iteracja po każdej instancji
-for instance_no in instances:
-    headers = HEADERS_TEMPLATE(instance_no)
-    body = soap_template.replace("{instance_no}", instance_no)
+# Przygotuj plik CSV
+with open("output.csv", "w", newline="", encoding="utf-8") as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(["instanceNo", "serviceVersion", "facadeVersion", "coreBanner"])
 
-    try:
-        response = requests.post(URL, data=body, headers=headers, verify=False)
-        filename = f"response_{instance_no}.xml"
+    for instance_no in instances:
+        headers = HEADERS_TEMPLATE(instance_no)
+        body = soap_template.replace("{instance_no}", instance_no)
 
-        with open(filename, "w", encoding="utf-8") as out:
-            out.write(response.text)
+        try:
+            response = requests.post(URL, data=body, headers=headers, verify=False)
+            filename = f"response_{instance_no}.xml"
 
-        print(f"{instance_no} → OK ({response.status_code})")
+            with open(filename, "w", encoding="utf-8") as out:
+                out.write(response.text)
 
-    except Exception as ex:
-        print(f"{instance_no} → ERROR: {ex}")
+            version, facade, banner = parse_response(response.text)
+            writer.writerow([instance_no, version, facade, banner])
+
+            print(f"{instance_no} → OK ({response.status_code})")
+
+        except Exception as ex:
+            writer.writerow([instance_no, "ERR", "ERR", "ERR"])
+            print(f"{instance_no} → ERROR: {ex}")
