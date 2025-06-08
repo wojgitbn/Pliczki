@@ -2,7 +2,27 @@ import requests
 import xml.etree.ElementTree as ET
 import csv
 
-URL = "http://10.3.6.31:9082/WS14_414_040G/services/wapiOtherSoapHttpPort"
+# Lista dostępnych IP
+IPS = [
+    "10.3.6.31",
+    "10.3.6.32",
+    "10.3.6.33",
+    "10.3.6.34"
+]
+
+# Wybór IP przez użytkownika
+print("Wybierz adres IP:")
+for i, ip in enumerate(IPS, 1):
+    print(f"{i}. {ip}")
+
+choice = input("Numer IP do użycia (1–4): ").strip()
+try:
+    IP = IPS[int(choice) - 1]
+except (IndexError, ValueError):
+    print("❌ Nieprawidłowy wybór. Domyślnie używam 10.3.6.31")
+    IP = "10.3.6.31"
+
+URL = f"http://{IP}:9082/WS14_414_040G/services/wapiOtherSoapHttpPort"
 SOAP_ACTION = "http://wapiOther/WapiOther.wsdl/getserviceinfoother"
 
 HEADERS_TEMPLATE = lambda instance_no: {
@@ -39,7 +59,7 @@ with open("soap_request3.xml", "r", encoding="utf-8") as f:
 # Przygotuj plik CSV do zapisu wyników
 with open("output.csv", "w", newline="", encoding="utf-8") as csvfile:
     writer = csv.writer(csvfile)
-    writer.writerow(["instanceNo", "serviceVersion", "facadeVersion", "coreBanner"])
+    writer.writerow(["instanceNo", "serviceVersion", "facadeVersion", "coreBanner", "sourceIP"])
 
     for instance_no in instances:
         headers = HEADERS_TEMPLATE(instance_no)
@@ -53,10 +73,10 @@ with open("output.csv", "w", newline="", encoding="utf-8") as csvfile:
             #     out.write(response.text)
 
             version, facade, banner = parse_response(response.text)
-            writer.writerow([instance_no, version, facade, banner])
+            writer.writerow([instance_no, version, facade, banner, IP])
 
             print(f"{instance_no} → OK ({response.status_code})")
 
         except Exception as ex:
-            writer.writerow([instance_no, "ERR", "ERR", "ERR"])
+            writer.writerow([instance_no, "ERR", "ERR", "ERR", IP])
             print(f"{instance_no} → ERROR: {ex}")
