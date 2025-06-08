@@ -3,10 +3,15 @@ import xml.etree.ElementTree as ET
 import csv
 import logging
 
+# === KONFIGURACJA ===
 URL = "http://10.3.6.31:9082/WS14_414_040G/services/wapiOtherSoapHttpPort"
+
 HEADERS = {
     "Content-Type": "text/xml; charset=UTF-8",
-    "SOAPAction": "http://wapiOther/WapiOther.wsdl/getserviceinfoother"
+    "SOAPAction": "http://wapiOther/WapiOther.wsdl/getserviceinfoother",
+    "Host": "10.3.6.31:9082",
+    "User-Agent": "Apache-HttpClient/4.5.5 (Java/16.0.2)",
+    "Connection": "Keep-Alive"
 }
 
 SOAP_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
@@ -34,6 +39,7 @@ SOAP_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
    </soapenv:Body>
 </soapenv:Envelope>"""
 
+# === LOGOWANIE BŁĘDÓW ===
 logging.basicConfig(filename='error.log', level=logging.ERROR)
 
 def parse_response(xml_text):
@@ -77,7 +83,7 @@ def main():
                 print(f"\n>>> instanceNo: {instance_no}")
                 print(f"HTTP status: {response.status_code}")
                 print("RESPONSE (początek):")
-                print(response.text[:800])
+                print(response.text[:800])  # Tylko początek do debugowania
 
                 if response.status_code != 200:
                     logging.error(f"{instance_no} - HTTP error {response.status_code}")
