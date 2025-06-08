@@ -17,10 +17,12 @@ for i, ip in enumerate(IPS, 1):
 
 choice = input("Numer IP do użycia (1–4): ").strip()
 try:
-    IP = IPS[int(choice) - 1]
+    index = int(choice)
+    IP = IPS[index - 1]
 except (IndexError, ValueError):
     print("❌ Nieprawidłowy wybór. Domyślnie używam 10.3.6.31")
-    IP = "10.3.6.31"
+    index = 1
+    IP = IPS[0]
 
 URL = f"http://{IP}:9082/WS14_414_040G/services/wapiOtherSoapHttpPort"
 SOAP_ACTION = "http://wapiOther/WapiOther.wsdl/getserviceinfoother"
@@ -56,8 +58,9 @@ with open("lista.txt", "r") as f:
 with open("soap_request3.xml", "r", encoding="utf-8") as f:
     soap_template = f.read()
 
-# Przygotuj plik CSV do zapisu wyników
-with open("output.csv", "w", newline="", encoding="utf-8") as csvfile:
+# Utwórz plik CSV z numerem IP w nazwie
+output_filename = f"output_{index}.csv"
+with open(output_filename, "w", newline="", encoding="utf-8") as csvfile:
     writer = csv.writer(csvfile)
     writer.writerow(["instanceNo", "serviceVersion", "facadeVersion", "coreBanner", "sourceIP"])
 
@@ -68,7 +71,6 @@ with open("output.csv", "w", newline="", encoding="utf-8") as csvfile:
         try:
             response = requests.post(URL, data=body, headers=headers, verify=False)
 
-            # Jeśli chcesz zapisywać odpowiedź XML, odkomentuj poniższą linijkę:
             # with open(f"response_{instance_no}.xml", "w", encoding="utf-8") as out:
             #     out.write(response.text)
 
