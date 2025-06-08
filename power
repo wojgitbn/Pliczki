@@ -3,19 +3,18 @@ import xml.etree.ElementTree as ET
 import csv
 import logging
 
-# === KONFIGURACJA ===
-URL = "http://ascb1:9080/GBWPROD_DEPOZ/ws14_412_000G/ws14_412_000G/services/wapiOtherSoapHttpPort"
+URL = "http://10.3.6.31:9082/WS14_414_040G/services/wapiOtherSoapHttpPort"
 HEADERS = {
-    "Content-Type": "text/xml; charset=utf-8",
-    "SOAPAction": "ServiceInfo_getserviceinfoother"
+    "Content-Type": "text/xml; charset=UTF-8",
+    "SOAPAction": "http://wapiOther/WapiOther.wsdl/getserviceinfoother"
 }
 
 SOAP_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-                  xmlns:typ="http://wapiOther/WapiOther.wsdl">
+                  xmlns:typ="http://wapiOther/WapiOther.wsdl/types/">
    <soapenv:Header/>
    <soapenv:Body>
-      <typ:ServiceInfo_getserviceinfoother>
+      <typ:getserviceinfootherElement>
          <typ:pObj1_inout>
             <typ:medReqlp1>1</typ:medReqlp1>
             <typ:medResplp1>1</typ:medResplp1>
@@ -31,18 +30,17 @@ SOAP_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
             <typ:facadeVersion>1</typ:facadeVersion>
             <typ:coreBanner>1</typ:coreBanner>
          </typ:pObj1_inout>
-      </typ:ServiceInfo_getserviceinfoother>
+      </typ:getserviceinfootherElement>
    </soapenv:Body>
 </soapenv:Envelope>"""
 
-# === LOGOWANIE BŁĘDÓW ===
 logging.basicConfig(filename='error.log', level=logging.ERROR)
 
 def parse_response(xml_text):
     try:
         ns = {
             'soapenv': 'http://schemas.xmlsoap.org/soap/envelope/',
-            'typ': 'http://wapiOther/WapiOther.wsdl'
+            'typ': 'http://wapiOther/WapiOther.wsdl/types/'
         }
         root = ET.fromstring(xml_text)
         body = root.find('.//soapenv:Body', ns)
