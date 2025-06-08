@@ -1,17 +1,24 @@
-import requests
-
-url = "http://10.3.6.31:9082/WS14_414_040G/services/wapiOtherSoapHttpPort"
-headers = {
-    "Content-Type": "text/xml; charset=UTF-8",
-    "SOAPAction": "http://wapiOther/WapiOther.wsdl/getserviceinfoother",
-    "instanceNo": "95370000"
-}
-
-with open("soap_request.xml", "r", encoding="utf-8") as f:
-    xml = f.read()
-
-response = requests.post(url, data=xml, headers=headers, verify=False)
-
-print("Status:", response.status_code)
-print("Response:")
-print(response.text[:1000])
+<?xml version="1.0" encoding="UTF-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+                  xmlns:typ="http://wapiOther/WapiOther.wsdl/types/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <typ:getserviceinfootherElement>
+         <typ:pObj1_inout>
+            <typ:medReqlp1>1</typ:medReqlp1>
+            <typ:medResplp1>1</typ:medResplp1>
+            <typ:wsrIn>1</typ:wsrIn>
+            <typ:srvOut>1</typ:srvOut>
+            <typ:instanceNo>95370000</typ:instanceNo>
+            <typ:wsrOut>1</typ:wsrOut>
+            <typ:srvIn>1</typ:srvIn>
+            <typ:medReqOut>1</typ:medReqOut>
+            <typ:medRespOut>1</typ:medRespOut>
+            <typ:onlyMediation>1</typ:onlyMediation>
+            <typ:serviceVersion>1</typ:serviceVersion>
+            <typ:facadeVersion>1</typ:facadeVersion>
+            <typ:coreBanner>1</typ:coreBanner>
+         </typ:pObj1_inout>
+      </typ:getserviceinfootherElement>
+   </soapenv:Body>
+</soapenv:Envelope>
