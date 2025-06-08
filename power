@@ -35,7 +35,7 @@ SOAP_TEMPLATE = """<?xml version="1.0" encoding="UTF-8"?>
    </soapenv:Body>
 </soapenv:Envelope>"""
 
-# === LOGI BŁĘDÓW ===
+# === LOGOWANIE BŁĘDÓW ===
 logging.basicConfig(filename='error.log', level=logging.ERROR)
 
 def parse_response(xml_text):
@@ -77,7 +77,14 @@ def main():
                 response = requests.post(URL, data=soap_body, headers=HEADERS, timeout=15)
 
                 print(f"\n>>> instanceNo: {instance_no}")
-                print(response.text[:300])  # Pokaż początek odpowiedzi
+                print(f"HTTP status: {response.status_code}")
+                print("RESPONSE (początek):")
+                print(response.text[:800])  # Pokaż początek odpowiedzi
+
+                if response.status_code != 200:
+                    logging.error(f"{instance_no} - HTTP error {response.status_code}")
+                    writer.writerow([instance_no, 'ERR', 'ERR', 'ERR'])
+                    continue
 
                 parsed = parse_response(response.text)
                 writer.writerow([
@@ -87,10 +94,11 @@ def main():
                     parsed['coreBanner']
                 ])
                 print(f"✓ OK → {parsed}")
+
             except Exception as ex:
                 writer.writerow([instance_no, 'ERR', 'ERR', 'ERR'])
                 logging.error(f"{instance_no} - Request error: {ex}")
-                print(f"✗ ERROR → {ex}")
+                print(f"✗ ERROR: {ex}")
 
 if __name__ == '__main__':
     main()
