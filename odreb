@@ -1,1 +1,55 @@
-h
+# --- wytnij_od_linii_postep.ps1 ---
+# Autor: ChatGPT
+# Opis: Kopiuje linie od wybranej do końca pliku, pokazując postęp w procentach
+
+Write-Host "=== WYCIĘCIE CZĘŚCI PLIKU TEKSTOWEGO Z POSTĘPEM ===`n"
+
+# Pobierz dane od użytkownika
+$plik = Read-Host "Podaj pełną ścieżkę do pliku źródłowego"
+$start = Read-Host "Od której linii chcesz rozpocząć (np. 15600000)"
+$nowy = Read-Host "Podaj nazwę lub ścieżkę dla nowego pliku (np. C:\wynik.txt)"
+
+# Sprawdź, czy plik istnieje
+if (!(Test-Path $plik)) {
+    Write-Host "`n❌ Błąd: Plik nie istnieje: $plik"
+    exit
+}
+
+# Konwersja numeru linii na liczbę całkowitą
+try {
+    $start = [int]$start
+} catch {
+    Write-Host "`n❌ Błąd: numer linii musi być liczbą."
+    exit
+}
+
+Write-Host "`n⏳ Przetwarzanie... może to chwilę potrwać przy dużym pliku.`n"
+
+# Pobierz liczbę wszystkich linii w pliku (potrzebne do liczenia procentów)
+$totalLines = (Get-Content $plik -ReadCount 100000 | Measure-Object -Line).Lines
+
+if ($start -gt $totalLines) {
+    Write-Host "`n❌ Błąd: Podana linia startowa jest większa niż liczba linii w pliku ($totalLines)."
+    exit
+}
+
+# Przetwarzanie pliku i wycinanie od wskazanej linii
+$licznik = 0
+$wybrane = @()
+
+Get-Content $plik -ReadCount 10000 | ForEach-Object {
+    $block = $_
+    $licznik += $block.Count
+
+    # Sprawdzenie, które linie zapisać
+    $blokDoZapisu = $block | Select-Object -Skip ([Math]::Max(0, $start - ($licznik - $block.Count) - 1))
+    if ($blokDoZapisu) {
+        $blokDoZapisu | Add-Content -Path $nowy -Encoding UTF8
+    }
+
+    # Wyświetl postęp
+    $procent = [math]::Round(($licznik / $totalLines) * 100, 1)
+    Write-Progress -Activity "Przetwarzanie pliku" -Status "$procent% wykonano" -PercentComplete $procent
+}
+
+Write-Host "`n✅ Gotowe! Nowy plik zapisano jako: $nowy"
