@@ -1,9 +1,15 @@
-DATE_FROM="2025.09.25"
-DATE_TO="2025.01.02"
+@echo off
+setlocal EnableDelayedExpansion
 
-while IFS=';' read -r USER PASS
-do
-  echo ">>> $USER"
-  printf "%s\n%s\n" "$DATE_FROM" "$DATE_TO" | \
-  sqlplus -s "$USER/$PASS@DB" @statistic.sql
-done < users.txt
+set DATE_FROM=2025.09.25
+set DATE_TO=2025.01.02
+
+for /f "tokens=1,2 delims=;" %%A in (users.txt) do (
+    echo Uruchamiam dla %%A
+    (
+        echo !DATE_FROM!
+        echo !DATE_TO!
+    ) | sqlplus -s %%A/%%B@DB @statistic.sql
+)
+
+pause
