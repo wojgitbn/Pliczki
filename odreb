@@ -1,5 +1,4 @@
 @echo off
-setlocal EnableDelayedExpansion
 
 set DATE_FROM=2025.09.25
 set DATE_TO=2025.01.02
@@ -8,10 +7,11 @@ for /f "tokens=1,2 delims=;" %%A in (users.txt) do (
     echo =====================================
     echo Uruchamiam dla %%A
 
-    (
-        echo !DATE_FROM!
-        echo !DATE_TO!
-    ) | sqlplus -s %%A/%%B@DB @statistic.sql
+    > input.tmp echo %DATE_FROM%
+    >> input.tmp echo %DATE_TO%
+
+    sqlplus -s %%A/%%B@DB @statistic.sql < input.tmp
 )
 
+del input.tmp
 pause
