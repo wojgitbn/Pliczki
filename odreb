@@ -1,17 +1,18 @@
-@echo off
+#!/bin/bash
 
-set DATE_FROM=2025.09.25
-set DATE_TO=2025.01.02
+# Ustawienie nazw plików
+INPUT_FILE="dane_logi.log"       # Podmień na nazwę swojego pliku 30 GB
+OUTPUT_FILE="wyekstrahowane.log"
 
-for /f "tokens=1,2 delims=;" %%A in (users.txt) do (
-    echo =====================================
-    echo Uruchamiam dla %%A
+# Zakres dat i szukany realm
+START="2026-10-05T09:14:33"
+END="2026-10-05T11:48:27"
+REALM='realm="eqn-saf"'
 
-    > input.tmp echo %DATE_FROM%
-    >> input.tmp echo %DATE_TO%
+echo "Rozpoczynam przetwarzanie 30 GB logów..."
 
-    sqlplus -s %%A/%%B@DB @statistic.sql < input.tmp
-)
+# Optymalizacja LC_ALL=C + filtrowanie grep -> awk
+LC_ALL=C grep "$REALM" "$INPUT_FILE" | \
+LC_ALL=C awk -F'at="' -v start="$START" -v end="$END" '$2 >= start && $2 <= end' > "$OUTPUT_FILE"
 
-del input.tmp
-pause
+echo "Gotowe! Wyniki zapisano w: $OUTPUT_FILE"
