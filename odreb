@@ -1,4 +1,2 @@
-#!/bin/bash
 
-
-LC_ALL=C zcat logi.log.gz | LC_ALL=C grep 'realm="eqn-saf"' | LC_ALL=C awk -F'at="' '$2 >= "2026-10-05T09:14:33" && $2 <= "2026-10-05T11:48:27"' > wyekstrahowane.log
+LC_ALL=C zcat logi.log.gz | LC_ALL=C grep -A 100 'realm="eqn-saf"' | LC_ALL=C awk -F'at="' 'BEGIN{print_lines=0} $2 >= "2026-10-05T09:14:33" && $2 <= "2026-10-05T11:48:27" {print_lines=101} print_lines > 0 {print; print_lines--}' > wyekstrahowane.log
